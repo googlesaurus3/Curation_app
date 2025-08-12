@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codie's Curations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-black text-white">
+
+    <!-- Entry Page -->
+    <div id="entry-page" class="flex flex-col items-center justify-center h-screen">
+        <h1 class="text-5xl font-bold mb-8">Codie's Curations</h1>
+        <button id="enter-btn" class="bg-white text-black px-8 py-3 rounded-full text-lg font-semibold">Enter</button>
+    </div>
+
+    <!-- Main App -->
+    <div id="main-app" class="hidden flex-col h-screen">
+        <!-- Header -->
+        <header class="bg-gray-900 p-4 flex justify-between items-center z-20">
+            <div class="flex items-center">
+                <button id="menu-btn" class="text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <h1 class="text-xl font-bold inline-block ml-4">Codie's Curations</h1>
+            </div>
+            <div>
+                <button id="undo-btn" class="mr-2 bg-gray-700 px-3 py-1 rounded-full text-sm">Undo</button>
+                <button id="redo-btn" class="bg-gray-700 px-3 py-1 rounded-full text-sm">Redo</button>
+            </div>
+        </header>
+
+        <!-- Canvas -->
+        <div class="relative flex-grow">
+            <canvas id="canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+        </div>
+
+        <!-- Jewellery Drawer -->
+        <div id="jewellery-drawer" class="fixed top-0 left-0 w-64 bg-gray-800 h-full transform -translate-x-full transition-transform duration-300 ease-in-out z-30 overflow-y-auto">
+            <div class="p-4">
+                <h2 class="text-2xl font-bold mb-4">Jewellery</h2>
+                <div class="flex flex-wrap mb-4 gap-2">
+                    <button data-category="All" class="cat-filter-btn bg-gray-600 px-3 py-1 rounded-full text-sm">All</button>
+                    <button data-category="Rings" class="cat-filter-btn bg-gray-700 px-3 py-1 rounded-full text-sm">Rings</button>
+                    <button data-category="Studs" class="cat-filter-btn bg-gray-700 px-3 py-1 rounded-full text-sm">Studs</button>
+                    <button data-category="Charms" class="cat-filter-btn bg-gray-700 px-3 py-1 rounded-full text-sm">Charms</button>
+                    <button data-category="Chains" class="cat-filter-btn bg-gray-700 px-3 py-1 rounded-full text-sm">Chains</button>
+                </div>
+                <div id="jewellery-list" class="space-y-2">
+                    <!-- Jewellery items will be populated here by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div id="main-controls" class="bg-gray-900 p-4 flex justify-around z-20">
+            <button id="upload-btn" class="bg-gray-700 px-3 py-1 rounded-full text-sm">Upload</button>
+            <input type="file" id="upload-input" class="hidden" accept="image/*">
+            <button id="reset-view-btn" class="bg-gray-700 px-3 py-1 rounded-full text-sm">Reset View</button>
+            <button id="save-btn" class="bg-gray-700 px-3 py-1 rounded-full text-sm">Save</button>
+            <button id="load-btn" class="bg-gray-700 px-3 py-1 rounded-full text-sm">Load</button>
+            <input type="file" id="load-input" class="hidden" accept="application/json">
+            <button id="download-btn" class="bg-gray-700 px-3 py-1 rounded-full text-sm">Download</button>
+            <button id="clear-btn" class="bg-gray-700 px-3 py-1 rounded-full text-sm">Clear All</button>
+        </div>
+
+        <!-- Contextual Controls (hidden by default) -->
+        <div id="contextual-controls" class="hidden bg-gray-900 p-2 flex flex-col z-20">
+            <div class="flex justify-between items-center px-2">
+                <span id="item-name" class="text-sm font-bold">Selected Item</span>
+                <button id="delete-btn" class="bg-red-500 text-white px-3 py-1 rounded-full text-xs">Delete</button>
+            </div>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-2 p-2">
+                <div>
+                    <label for="size-slider" class="text-xs">Size</label>
+                    <input type="range" id="size-slider" min="2" max="100" value="20" class="w-full h-1">
+                </div>
+                <div>
+                    <label for="rotation-slider" class="text-xs">Rotation</label>
+                    <input type="range" id="rotation-slider" min="0" max="360" value="0" class="w-full h-1">
+                </div>
+                <div id="length-control" class="hidden">
+                    <label for="length-slider" class="text-xs">Length</label>
+                    <input type="range" id="length-slider" min="5" max="100" value="20" class="w-full h-1">
+                </div>
+                <div id="thickness-control" class="hidden">
+                    <label for="thickness-slider" class="text-xs">Thickness</label>
+                    <input type="range" id="thickness-slider" min="1" max="20" value="2" class="w-full h-1">
+                </div>
+                <div id="color-control" class="flex flex-col">
+                    <label for="color-picker" class="text-xs">Color</label>
+                    <input type="color" id="color-picker" value="#C0C0C0" class="w-full h-8 p-0 border-0 bg-transparent">
+                </div>
+                <div class="flex items-center space-x-2">
+                     <button id="flip-btn" class="bg-gray-700 px-2 py-1 rounded text-xs">Flip</button>
+                     <button id="layer-up-btn" class="bg-gray-700 px-2 py-1 rounded text-xs">▲</button>
+                     <button id="layer-down-btn" class="bg-gray-700 px-2 py-1 rounded text-xs">▼</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Codie's Curations - Piercing App
+         * A mobile-first web application for designing ear piercing curations.
+         * Built with vanilla JavaScript and Tailwind CSS.
+         */
+
+        // --- App Entry ---
+        const entryPage = document.getElementById('entry-page');
+        const mainApp = document.getElementById('main-app');
+        const enterBtn = document.getElementById('enter-btn');
+
+        enterBtn.addEventListener('click', () => {
+            entryPage.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+            mainApp.classList.add('flex');
+            // Initialize all components of the main app
+            setupCanvas();
+            initJewellery();
+            initControls();
+            saveState(); // Save the initial empty state
+            requestAnimationFrame(draw);
+        });
+
+        // --- DOM Element References ---
+        const menuBtn = document.getElementById('menu-btn');
+        const jewelleryDrawer = document.getElementById('jewellery-drawer');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const uploadBtn = document.getElementById('upload-btn');
+        const uploadInput = document.getElementById('upload-input');
+        const resetViewBtn = document.getElementById('reset-view-btn');
+        const mainControls = document.getElementById('main-controls');
+        const contextualControls = document.getElementById('contextual-controls');
+        const itemName = document.getElementById('item-name');
+        const deleteBtn = document.getElementById('delete-btn');
+        const sizeSlider = document.getElementById('size-slider');
+        const rotationSlider = document.getElementById('rotation-slider');
+        const lengthControl = document.getElementById('length-control');
+        const lengthSlider = document.getElementById('length-slider');
+        const thicknessControl = document.getElementById('thickness-control');
+        const thicknessSlider = document.getElementById('thickness-slider');
+        const colorControl = document.getElementById('color-control');
+        const colorPicker = document.getElementById('color-picker');
+        const flipBtn = document.getElementById('flip-btn');
+        const layerUpBtn = document.getElementById('layer-up-btn');
+        const layerDownBtn = document.getElementById('layer-down-btn');
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const loadBtn = document.getElementById('load-btn');
+        const loadInput = document.getElementById('load-input');
+        const downloadBtn = document.getElementById('download-btn');
+        const clearBtn = document.getElementById('clear-btn');
+
+        // --- Application State ---
+        let backgroundImage = null; // The user's uploaded image
+        let transform = { x: 0, y: 0, scale: 1 }; // Pan and zoom state of the background
+        let isPanning = false; // Is the user currently panning?
+        let isDragging = false; // Is the user currently dragging a jewellery item?
+        let jewelleryLibrary = []; // Holds definitions of all available jewellery
+        let placedJewellery = []; // Holds all jewellery items currently on the canvas
+        let selectedJewelleryForPlacement = null; // The item chosen from the drawer, ready to be placed
+        let selectedItem = null; // The jewellery item currently selected on the canvas
+
+        // Interaction state
+        let activePointers = []; // For tracking multi-touch
+        let lastPointerDistance = null; // For calculating pinch-to-zoom
+        let pointerStartPos = null; // Start position of a pointer down event
+
+        // History state
+        let undoHistory = [];
+        let redoHistory = [];
+
+        // --- Initialization ---
+
+        /**
+         * Sets up the canvas dimensions and scaling for high-resolution displays.
+         */
+        function setupCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        /**
+         * Defines the jewellery library with procedural drawing functions.
+         */
+        function initJewellery() {
+            const drawStud = (ctx, item) => { ctx.fillStyle = item.color || 'silver'; ctx.beginPath(); ctx.arc(0, 0, item.size / 2, 0, Math.PI * 2); ctx.fill(); };
+            const drawHoop = (ctx, item) => { ctx.strokeStyle = item.color || 'silver'; ctx.lineWidth = item.thickness || 1; ctx.beginPath(); ctx.arc(0, 0, item.size / 2, 0, Math.PI * 2); ctx.stroke(); };
+            const drawBarbell = (ctx, item) => {
+                ctx.strokeStyle = item.color || 'silver'; ctx.fillStyle = item.color || 'silver'; ctx.lineWidth = item.thickness || 2;
+                const length = item.length || 20, ballSize = item.ballSize || 3;
+                ctx.beginPath(); ctx.moveTo(-length / 2, 0); ctx.lineTo(length / 2, 0); ctx.stroke();
+                ctx.beginPath(); ctx.arc(-length / 2, 0, ballSize, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(length / 2, 0, ballSize, 0, Math.PI * 2); ctx.fill();
+            };
+            jewelleryLibrary = [
+                { id: 'stud_silver', name: 'Silver Stud', category: 'Studs', type: 'procedural', draw: drawStud, size: 8, color: '#C0C0C0' },
+                { id: 'stud_gold', name: 'Gold Stud', category: 'Studs', type: 'procedural', draw: drawStud, size: 8, color: '#FFD700' },
+                { id: 'hoop_small', name: 'Small Hoop', category: 'Rings', type: 'procedural', draw: drawHoop, size: 20, thickness: 2, color: '#C0C0C0' },
+                { id: 'barbell_short', name: 'Barbell', category: 'Studs', type: 'procedural', draw: drawBarbell, length: 15, thickness: 2, ballSize: 3, color: '#C0C0C0' },
+            ];
+            populateJewelleryDrawer();
+        }
+
+        /**
+         * Populates the jewellery drawer with items, optionally filtering by category.
+         * @param {string} category The category to filter by. Defaults to 'All'.
+         */
+        function populateJewelleryDrawer(category = 'All') {
+            const list = document.getElementById('jewellery-list');
+            list.innerHTML = '';
+            const filteredLibrary = category === 'All' ? jewelleryLibrary : jewelleryLibrary.filter(item => item.category === category);
+            filteredLibrary.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'p-2 bg-gray-700 rounded flex items-center cursor-pointer hover:bg-gray-600';
+                div.innerHTML = `<canvas class="w-10 h-10 bg-gray-900 rounded mr-4"></canvas><span>${item.name}</span>`;
+                list.appendChild(div);
+                const previewCanvas = div.querySelector('canvas');
+                const previewCtx = previewCanvas.getContext('2d');
+                const dpr = window.devicePixelRatio || 1;
+                previewCanvas.width = 40 * dpr; previewCanvas.height = 40 * dpr;
+                previewCtx.scale(dpr, dpr);
+                previewCtx.save(); previewCtx.translate(20, 20);
+                if (item.type === 'procedural') item.draw(previewCtx, { ...item, size: item.size * 0.8, length: item.length * 0.8 });
+                previewCtx.restore();
+                div.addEventListener('click', () => {
+                    selectedJewelleryForPlacement = { ...item, x: 0, y: 0, rotation: 0, scale: 1, flip: false };
+                    jewelleryDrawer.classList.add('-translate-x-full');
+                });
+            });
+        }
+
+        // --- Drawing ---
+
+        /**
+         * The main rendering loop for the canvas.
+         * @param {boolean} isExport If true, draws a single frame for export without selection indicators.
+         */
+        function draw(isExport = false) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const dpr = window.devicePixelRatio || 1;
+            const viewWidth = canvas.width / dpr; const viewHeight = canvas.height / dpr;
+            ctx.fillStyle = 'black'; ctx.fillRect(0, 0, viewWidth, viewHeight);
+
+            if (backgroundImage) {
+                ctx.save();
+                ctx.translate(transform.x, transform.y); ctx.scale(transform.scale, transform.scale);
+                ctx.drawImage(backgroundImage, 0, 0);
+                placedJewellery.forEach(item => {
+                    ctx.save();
+                    ctx.translate(item.x, item.y); ctx.rotate(item.rotation * Math.PI / 180); ctx.scale(item.flip ? -1 : 1, 1);
+                    item.draw(ctx, item);
+                    ctx.restore();
+                });
+                if (selectedItem && !isExport) {
+                    ctx.save();
+                    ctx.translate(selectedItem.x, selectedItem.y); ctx.rotate(selectedItem.rotation * Math.PI / 180);
+                    const itemSize = (selectedItem.size || 20), padding = 5;
+                    ctx.strokeStyle = 'cyan'; ctx.lineWidth = 1 / transform.scale;
+                    ctx.strokeRect(-itemSize/2 - padding, -itemSize/2 - padding, itemSize + padding*2, itemSize + padding*2);
+                    ctx.restore();
+                }
+                ctx.restore();
+            } else {
+                ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.textAlign = 'center';
+                ctx.fillText('Upload an image to start', viewWidth / 2, viewHeight / 2);
+            }
+            if (!isExport) requestAnimationFrame(draw);
+        }
+
+        // --- History Management ---
+
+        /** Saves the current state of placed jewellery to the undo history. */
+        function saveState() {
+            const state = JSON.parse(JSON.stringify(placedJewellery));
+            undoHistory.push(state);
+            redoHistory = [];
+            updateUndoRedoButtons();
+        }
+
+        /** Reverts to the previous state in the history. */
+        function undo() {
+            if (undoHistory.length < 2) return;
+            redoHistory.push(undoHistory.pop());
+            placedJewellery = JSON.parse(JSON.stringify(undoHistory[undoHistory.length - 1]));
+            selectedItem = null;
+            updateControlPanel();
+            updateUndoRedoButtons();
+        }
+
+        /** Re-applies a state that was undone. */
+        function redo() {
+            if (redoHistory.length === 0) return;
+            const state = redoHistory.pop();
+            undoHistory.push(state);
+            placedJewellery = JSON.parse(JSON.stringify(state));
+            selectedItem = null;
+            updateControlPanel();
+            updateUndoRedoButtons();
+        }
+
+        /** Updates the disabled state of the undo/redo buttons. */
+        function updateUndoRedoButtons() {
+            undoBtn.disabled = undoHistory.length < 2;
+            redoBtn.disabled = redoHistory.length === 0;
+            undoBtn.classList.toggle('opacity-50', undoBtn.disabled);
+            redoBtn.classList.toggle('opacity-50', redoBtn.disabled);
+        }
+
+        // --- Controls & UI Logic ---
+
+        /** Shows/hides and populates the contextual control panel based on the selected item. */
+        function updateControlPanel() {
+            if (selectedItem) {
+                mainControls.classList.add('hidden'); contextualControls.classList.remove('hidden');
+                itemName.textContent = selectedItem.name;
+                sizeSlider.value = selectedItem.size;
+                rotationSlider.value = selectedItem.rotation;
+                lengthControl.classList.toggle('hidden', !selectedItem.hasOwnProperty('length'));
+                if (selectedItem.hasOwnProperty('length')) lengthSlider.value = selectedItem.length;
+                thicknessControl.classList.toggle('hidden', !selectedItem.hasOwnProperty('thickness'));
+                if (selectedItem.hasOwnProperty('thickness')) thicknessSlider.value = selectedItem.thickness;
+                colorControl.classList.toggle('hidden', !selectedItem.hasOwnProperty('color'));
+                if (selectedItem.hasOwnProperty('color')) colorPicker.value = selectedItem.color;
+            } else {
+                mainControls.classList.remove('hidden'); contextualControls.classList.add('hidden');
+            }
+        }
+
+        /** Initializes all control button and slider event listeners. */
+        function initControls() {
+            const controls = [sizeSlider, rotationSlider, lengthSlider, thicknessSlider, colorPicker];
+            controls.forEach(control => {
+                control.addEventListener('mousedown', () => { if(selectedItem) saveState() }); // Save state before a change
+                control.addEventListener('change', () => { if(selectedItem) saveState() }); // Save state after a change
+                control.addEventListener('input', e => {
+                    if (!selectedItem) return;
+                    const prop = e.target.id.split('-')[0];
+                    selectedItem[prop] = e.target.type === 'color' ? e.target.value : parseFloat(e.target.value);
+                });
+            });
+            deleteBtn.addEventListener('click', () => { if (selectedItem) { saveState(); placedJewellery = placedJewellery.filter(i => i.id !== selectedItem.id); selectedItem = null; updateControlPanel(); saveState(); } });
+            flipBtn.addEventListener('click', () => { if(selectedItem) { saveState(); selectedItem.flip = !selectedItem.flip; saveState(); } });
+            layerUpBtn.addEventListener('click', () => { if(selectedItem) { saveState(); const i = placedJewellery.findIndex(item => item.id === selectedItem.id); if (i < placedJewellery.length - 1) { [placedJewellery[i], placedJewellery[i+1]] = [placedJewellery[i+1], placedJewellery[i]]; saveState(); } } });
+            layerDownBtn.addEventListener('click', () => { if(selectedItem) { saveState(); const i = placedJewellery.findIndex(item => item.id === selectedItem.id); if (i > 0) { [placedJewellery[i], placedJewellery[i-1]] = [placedJewellery[i-1], placedJewellery[i]]; saveState(); } } });
+        }
+
+        // --- File Management ---
+
+        /** Saves the entire project state to a JSON file. */
+        function saveProject() {
+            const state = {
+                placedJewellery: placedJewellery,
+                transform: transform,
+                backgroundImage: backgroundImage ? backgroundImage.src : null
+            };
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+            a.download = 'codie-curation.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        /** Loads a project state from a JSON file. */
+        function loadProject(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const state = JSON.parse(event.target.result);
+                    saveState();
+                    placedJewellery = state.placedJewellery || [];
+                    placedJewellery.forEach(item => { // Re-assign drawing functions after loading
+                        const libItem = jewelleryLibrary.find(li => item.name.includes(li.name));
+                        if(libItem) item.draw = libItem.draw;
+                    });
+                    transform = state.transform || { x: 0, y: 0, scale: 1 };
+                    selectedItem = null;
+                    if (state.backgroundImage) {
+                        const img = new Image();
+                        img.onload = () => { backgroundImage = img; };
+                        img.src = state.backgroundImage;
+                    } else { backgroundImage = null; }
+                    saveState();
+                    updateControlPanel();
+                } catch (err) { alert('Error loading file. Is it a valid curation file?'); }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // Reset file input
+        }
+
+        /** Exports the current canvas view as a PNG image. */
+        function downloadImage() {
+            const wasSelected = selectedItem;
+            selectedItem = null;
+            draw(true); // Draw one frame for export
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = 'curation.png';
+            a.click();
+            selectedItem = wasSelected;
+        }
+
+        // --- Interaction & Event Handling ---
+
+        /** Gets the client position of a pointer or touch event. */
+        function getEventPosition(e, pointerId) {
+            const rect = canvas.getBoundingClientRect();
+            const source = e.touches ? Array.from(e.touches).find(t => t.identifier === pointerId) : e;
+            if (!source) return null;
+            return { x: source.clientX - rect.left, y: source.clientY - rect.top };
+        }
+        /** Converts screen coordinates to world coordinates (accounting for pan/zoom). */
+        function screenToWorld(pos) { return { x: (pos.x - transform.x) / transform.scale, y: (pos.y - transform.y) / transform.scale }; }
+        /** Checks if a world coordinate position is inside a jewellery item. */
+        function isHit(item, worldPos) { const itemSize = (item.size || 20) * (item.scale || 1); return Math.hypot(worldPos.x - item.x, worldPos.y - item.y) < itemSize / 2; }
+
+        function handlePointerDown(e) {
+            e.preventDefault();
+            activePointers.push({ id: e.pointerId, lastPos: getEventPosition(e) });
+            pointerStartPos = getEventPosition(e);
+
+            if (activePointers.length === 1) { // First pointer down
+                isPanning = false; isDragging = false;
+                if (selectedJewelleryForPlacement) return;
+                const worldPos = screenToWorld(pointerStartPos);
+                let clickedItem = null;
+                for (let i = placedJewellery.length - 1; i >= 0; i--) { if (isHit(placedJewellery[i], worldPos)) { clickedItem = placedJewellery[i]; break; } }
+
+                if (clickedItem) {
+                    saveState();
+                    selectedItem = clickedItem;
+                    isDragging = true;
+                } else {
+                    selectedItem = null;
+                    isPanning = true;
+                }
+                updateControlPanel();
+            } else if (activePointers.length === 2) { // Second pointer down (start pinch)
+                isPanning = false; isDragging = false;
+                lastPointerDistance = Math.hypot(activePointers[0].lastPos.x - activePointers[1].lastPos.x, activePointers[0].lastPos.y - activePointers[1].lastPos.y);
+            }
+        }
+
+        function handlePointerMove(e) {
+            e.preventDefault();
+            const pointer = activePointers.find(p => p.id === e.pointerId);
+            if (!pointer) return;
+
+            const currentPos = getEventPosition(e);
+            const lastPos = pointer.lastPos;
+
+            if (activePointers.length === 2 && lastPointerDistance) { // Pinch-to-zoom
+                const newDist = Math.hypot(activePointers[0].lastPos.x - activePointers[1].lastPos.x, activePointers[0].lastPos.y - activePointers[1].lastPos.y);
+                const scaleAmount = newDist / lastPointerDistance;
+                const p1 = activePointers[0].lastPos; const p2 = activePointers[1].lastPos;
+                const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+                transform.x = center.x - (center.x - transform.x) * scaleAmount;
+                transform.y = center.y - (center.y - transform.y) * scaleAmount;
+                transform.scale *= scaleAmount;
+                lastPointerDistance = newDist;
+            } else if (activePointers.length === 1) { // Pan or drag
+                if (isDragging && selectedItem) {
+                    const worldPos = screenToWorld(currentPos);
+                    const lastWorldPos = screenToWorld(lastPos);
+                    selectedItem.x += worldPos.x - lastWorldPos.x;
+                    selectedItem.y += worldPos.y - lastWorldPos.y;
+                } else if (isPanning) {
+                    transform.x += currentPos.x - lastPos.x;
+                    transform.y += currentPos.y - lastPos.y;
+                }
+            }
+            pointer.lastPos = currentPos;
+        }
+
+        function handlePointerUp(e) {
+            e.preventDefault();
+            if (isDragging) saveState();
+            const upPos = getEventPosition(e);
+            const dist = Math.hypot(upPos.x - pointerStartPos.x, upPos.y - pointerStartPos.y);
+
+            if (activePointers.length === 1 && selectedJewelleryForPlacement && dist < 5) {
+                saveState();
+                const worldPos = screenToWorld(upPos);
+                const newJewellery = { ...selectedJewelleryForPlacement, id: Date.now(), x: worldPos.x, y: worldPos.y, };
+                placedJewellery.push(newJewellery);
+                selectedItem = newJewellery;
+                selectedJewelleryForPlacement = null;
+                updateControlPanel();
+                saveState();
+            }
+
+            activePointers = activePointers.filter(p => p.id !== e.pointerId);
+            isDragging = false; isPanning = false; pointerStartPos = null;
+            if (activePointers.length < 2) lastPointerDistance = null;
+        }
+
+        // --- Global Event Listeners ---
+        menuBtn.addEventListener('click', () => jewelleryDrawer.classList.toggle('-translate-x-full'));
+        uploadBtn.addEventListener('click', () => uploadInput.click());
+        uploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => { const img = new Image(); img.onload = () => { backgroundImage = img; resetView(); saveState(); }; img.src = event.target.result; };
+            reader.readAsDataURL(file);
+        });
+        function resetView() {
+            if (!backgroundImage) return;
+            const canvasAspect = canvas.clientWidth / canvas.clientHeight;
+            const imageAspect = backgroundImage.width / backgroundImage.height;
+            const scale = canvasAspect > imageAspect ? canvas.clientWidth / backgroundImage.width : canvas.clientHeight / backgroundImage.height;
+            transform = { scale: scale, x: (canvas.clientWidth - backgroundImage.width * scale) / 2, y: (canvas.clientHeight - backgroundImage.height * scale) / 2 };
+        }
+        resetViewBtn.addEventListener('click', () => { if(backgroundImage) { saveState(); resetView(); saveState(); } });
+        clearBtn.addEventListener('click', () => { if(confirm('Are you sure you want to clear everything?')) { saveState(); placedJewellery = []; selectedItem = null; backgroundImage = null; transform = {x:0, y:0, scale:1}; updateControlPanel(); saveState(); } });
+
+        canvas.addEventListener('pointerdown', handlePointerDown);
+        canvas.addEventListener('pointermove', handlePointerMove);
+        canvas.addEventListener('pointerup', handlePointerUp);
+        canvas.addEventListener('pointerleave', handlePointerUp);
+        canvas.addEventListener('pointercancel', handlePointerUp);
+        canvas.addEventListener('wheel', handleZoom, { passive: false });
+
+        window.addEventListener('resize', () => { setupCanvas(); if(backgroundImage) resetView(); });
+    </script>
+
+</body>
+</html>
