@@ -240,7 +240,7 @@
                 if (item.type === 'procedural') item.draw(previewCtx, { ...item, size: item.size * 0.8, length: item.length * 0.8 });
                 previewCtx.restore();
                 div.addEventListener('click', () => {
-                    selectedJewelleryForPlacement = { ...item, x: 0, y: 0, rotation: 0, scale: 1, flip: false };
+                    selectedJewelleryForPlacement = { ...item, libraryId: item.id, x: 0, y: 0, rotation: 0, scale: 1, flip: false };
                     jewelleryDrawer.classList.add('-translate-x-full');
                 });
             });
@@ -388,7 +388,7 @@
                     saveState();
                     placedJewellery = state.placedJewellery || [];
                     placedJewellery.forEach(item => { // Re-assign drawing functions after loading
-                        const libItem = jewelleryLibrary.find(li => item.name.includes(li.name));
+                        const libItem = jewelleryLibrary.find(li => li.id === item.libraryId);
                         if(libItem) item.draw = libItem.draw;
                     });
                     transform = state.transform || { x: 0, y: 0, scale: 1 };
@@ -419,13 +419,14 @@
         }
 
         // --- Interaction & Event Handling ---
+        let activePointers = [];
+        let lastPointerDistance = null;
+        let pointerStartPos = null;
 
         /** Gets the client position of a pointer or touch event. */
-        function getEventPosition(e, pointerId) {
+        function getEventPosition(e) {
             const rect = canvas.getBoundingClientRect();
-            const source = e.touches ? Array.from(e.touches).find(t => t.identifier === pointerId) : e;
-            if (!source) return null;
-            return { x: source.clientX - rect.left, y: source.clientY - rect.top };
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
         /** Converts screen coordinates to world coordinates (accounting for pan/zoom). */
         function screenToWorld(pos) { return { x: (pos.x - transform.x) / transform.scale, y: (pos.y - transform.y) / transform.scale }; }
@@ -435,10 +436,10 @@
         function handlePointerDown(e) {
             e.preventDefault();
             activePointers.push({ id: e.pointerId, lastPos: getEventPosition(e) });
-            pointerStartPos = getEventPosition(e);
 
             if (activePointers.length === 1) { // First pointer down
                 isPanning = false; isDragging = false;
+                pointerStartPos = getEventPosition(e);
                 if (selectedJewelleryForPlacement) return;
                 const worldPos = screenToWorld(pointerStartPos);
                 let clickedItem = null;
@@ -468,10 +469,12 @@
             const lastPos = pointer.lastPos;
 
             if (activePointers.length === 2 && lastPointerDistance) { // Pinch-to-zoom
-                const newDist = Math.hypot(activePointers[0].lastPos.x - activePointers[1].lastPos.x, activePointers[0].lastPos.y - activePointers[1].lastPos.y);
+                const p1 = activePointers[0];
+                const p2 = activePointers.find(p => p.id !== e.pointerId);
+                if (!p2) return;
+                const newDist = Math.hypot(currentPos.x - p2.lastPos.x, currentPos.y - p2.lastPos.y);
                 const scaleAmount = newDist / lastPointerDistance;
-                const p1 = activePointers[0].lastPos; const p2 = activePointers[1].lastPos;
-                const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+                const center = { x: (currentPos.x + p2.lastPos.x) / 2, y: (currentPos.y + p2.lastPos.y) / 2 };
                 transform.x = center.x - (center.x - transform.x) * scaleAmount;
                 transform.y = center.y - (center.y - transform.y) * scaleAmount;
                 transform.scale *= scaleAmount;
@@ -492,27 +495,50 @@
 
         function handlePointerUp(e) {
             e.preventDefault();
-            if (isDragging) saveState();
-            const upPos = getEventPosition(e);
-            const dist = Math.hypot(upPos.x - pointerStartPos.x, upPos.y - pointerStartPos.y);
 
-            if (activePointers.length === 1 && selectedJewelleryForPlacement && dist < 5) {
-                saveState();
-                const worldPos = screenToWorld(upPos);
-                const newJewellery = { ...selectedJewelleryForPlacement, id: Date.now(), x: worldPos.x, y: worldPos.y, };
-                placedJewellery.push(newJewellery);
-                selectedItem = newJewellery;
-                selectedJewelleryForPlacement = null;
-                updateControlPanel();
-                saveState();
+            const pointerIndex = activePointers.findIndex(p => p.id === e.pointerId);
+            if (pointerIndex === -1) return;
+
+            if (isDragging) saveState();
+
+            const upPos = getEventPosition(e);
+            if (pointerStartPos) {
+                const dist = Math.hypot(upPos.x - pointerStartPos.x, upPos.y - pointerStartPos.y);
+                if (activePointers.length === 1 && selectedJewelleryForPlacement && dist < 5) {
+                    saveState();
+                    const worldPos = screenToWorld(upPos);
+                    const newJewellery = { ...selectedJewelleryForPlacement, id: Date.now(), x: worldPos.x, y: worldPos.y };
+                    placedJewellery.push(newJewellery);
+                    selectedItem = newJewellery;
+                    selectedJewelleryForPlacement = null;
+                    updateControlPanel();
+                    saveState();
+                }
             }
 
-            activePointers = activePointers.filter(p => p.id !== e.pointerId);
-            isDragging = false; isPanning = false; pointerStartPos = null;
+            activePointers.splice(pointerIndex, 1);
+            isDragging = false; isPanning = false;
             if (activePointers.length < 2) lastPointerDistance = null;
+            if (activePointers.length < 1) pointerStartPos = null;
+        }
+
+        function handleZoom(e) {
+            e.preventDefault();
+            const pos = getEventPosition(e);
+            const scaleAmount = e.deltaY > 0 ? 1 / 1.1 : 1.1;
+            transform.x = pos.x - (pos.x - transform.x) * scaleAmount;
+            transform.y = pos.y - (pos.y - transform.y) * scaleAmount;
+            transform.scale *= scaleAmount;
         }
 
         // --- Global Event Listeners ---
+        // ... (rest of the listeners)
+        undoBtn.addEventListener('click', undo);
+        redoBtn.addEventListener('click', redo);
+        saveBtn.addEventListener('click', saveProject);
+        loadBtn.addEventListener('click', () => loadInput.click());
+        loadInput.addEventListener('change', loadProject);
+        downloadBtn.addEventListener('click', downloadImage);
         menuBtn.addEventListener('click', () => jewelleryDrawer.classList.toggle('-translate-x-full'));
         uploadBtn.addEventListener('click', () => uploadInput.click());
         uploadInput.addEventListener('change', (e) => {
