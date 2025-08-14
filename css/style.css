@@ -1,0 +1,53 @@
+/* Custom Styles for Codies Curations */
+
+/* We can add custom styles here if Tailwind isn't enough */
+body {
+    background-color: #1a1a1a; /* A slightly softer black */
+}
+
+/* Pink and Black Theme */
+:root {
+    --primary-pink: #ec4899; /* Tailwind's pink-500 */
+    --dark-bg: #111827; /* Tailwind's gray-900 */
+    --text-light: #f3f4f6; /* Tailwind's gray-100 */
+}
+
+/* Example of custom utility */
+.border-primary {
+    border-color: var(--primary-pink);
+}
+
+.text-primary {
+    color: var(--primary-pink);
+}
+
+.bg-primary-dark {
+    background-color: var(--dark-bg);
+}
+
+/* Style for the canvas container */
+.canvas-container {
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 1 / 1;
+    margin: auto;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Highlighting for selected jewelry in the palette */
+#jewelry-items > .selected-jewelry {
+    outline: 2px solid var(--primary-pink);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+}
+
+/* Styling for active category button */
+.category-btn.active-category {
+    background-color: var(--primary-pink);
+    color: white;
+}

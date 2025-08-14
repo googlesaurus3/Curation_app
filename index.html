@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codies Curations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-black text-white font-sans">
+    <div id="app" class="flex flex-col md:flex-row h-screen">
+        <!-- Main Content: Canvas -->
+        <main class="flex-1 flex flex-col items-center justify-center p-4">
+            <h1 class="text-3xl font-bold text-pink-500 mb-4">Codies Curations</h1>
+            <div class="canvas-container border-2 border-pink-500 rounded-lg overflow-hidden">
+                <canvas id="piercing-canvas"></canvas>
+            </div>
+        </main>
+
+        <!-- Side Panel: Controls & Jewelry -->
+        <aside class="w-full md:w-80 lg:w-96 bg-gray-900 p-4 overflow-y-auto">
+            <div id="controls-panel">
+                <h2 class="text-xl font-bold text-pink-400 border-b border-pink-400 pb-2">Controls</h2>
+                <!-- General Controls -->
+                <div id="general-controls" class="my-4 space-y-4">
+                    <div>
+                        <label for="image-upload" class="block mb-2 text-sm font-medium text-gray-300">Upload Ear Image</label>
+                        <input type="file" id="image-upload" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-pink-600 file:text-white hover:file:bg-pink-700">
+                    </div>
+                    <button id="reset-view-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Reset View</button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="undo-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled>Undo</button>
+                        <button id="redo-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled>Redo</button>
+                    </div>
+                    <div class="space-y-2 pt-4 border-t border-gray-700">
+                        <button id="save-project-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded">Save Project</button>
+                        <button id="load-project-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded">Load Project</button>
+                        <input type="file" id="load-project-input" class="hidden" accept=".json">
+                        <button id="download-image-btn" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded">Download Image</button>
+                        <button id="clear-all-btn" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded">Clear All</button>
+                    </div>
+                </div>
+                <!-- Jewelry-specific Controls -->
+                <div id="jewelry-controls" class="my-4 hidden space-y-4">
+                    <h3 class="text-lg font-semibold text-pink-300">Edit Jewelry</h3>
+
+                    <!-- Size / Thickness -->
+                    <div id="control-size">
+                        <label for="size-slider" class="block mb-1 text-sm font-medium text-gray-300">Size / Thickness</label>
+                        <input id="size-slider" type="range" min="1" max="100" value="20" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Length -->
+                    <div id="control-length" class="hidden">
+                        <label for="length-slider" class="block mb-1 text-sm font-medium text-gray-300">Length</label>
+                        <input id="length-slider" type="range" min="5" max="200" value="50" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Rotation -->
+                    <div id="control-rotation">
+                        <label for="rotation-slider" class="block mb-1 text-sm font-medium text-gray-300">Rotation</label>
+                        <input id="rotation-slider" type="range" min="0" max="360" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Color -->
+                    <div id="control-color" class="hidden">
+                        <label for="color-picker" class="block mb-1 text-sm font-medium text-gray-300">Color</label>
+                        <input id="color-picker" type="color" value="#FFD700" class="w-full h-10 p-1 bg-gray-700 border-gray-600 rounded cursor-pointer">
+                    </div>
+
+                    <!-- Layering -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="bring-forward-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Bring Forward</button>
+                        <button id="send-backward-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Send Backward</button>
+                    </div>
+
+                    <!-- Actions -->
+                     <div class="grid grid-cols-2 gap-2">
+                        <button id="flip-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Flip</button>
+                        <button id="delete-btn" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded">Delete</button>
+                    </div>
+                </div>
+            </div>
+            <div id="jewelry-palette">
+                <h2 class="text-xl font-bold text-pink-400 border-b border-pink-400 pb-2 mt-6">Jewelry</h2>
+                <!-- Category Filters -->
+                <div id="jewelry-categories" class="my-4 flex flex-wrap gap-2">
+                    <button data-category="All" class="category-btn active-category bg-pink-600 text-white font-bold py-2 px-4 rounded">All</button>
+                    <button data-category="Rings" class="category-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Rings</button>
+                    <button data-category="Studs" class="category-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Studs</button>
+                    <button data-category="Charms" class="category-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Charms</button>
+                    <button data-category="Chains" class="category-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Chains</button>
+                </div>
+                <!-- Jewelry Items -->
+                <div id="jewelry-items" class="grid grid-cols-4 gap-4"></div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
