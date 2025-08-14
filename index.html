@@ -199,7 +199,11 @@
         /**
          * Defines the jewellery library with procedural drawing functions.
          */
-        function initJewellery() {
+        async function initJewellery() {
+            const list = document.getElementById('jewellery-list');
+            list.innerHTML = `<div class="text-center p-4">Loading images...</div>`;
+
+            // Define procedural drawing functions
             const drawStud = (ctx, item) => { ctx.fillStyle = item.color || 'silver'; ctx.beginPath(); ctx.arc(0, 0, item.size / 2, 0, Math.PI * 2); ctx.fill(); };
             const drawHoop = (ctx, item) => { ctx.strokeStyle = item.color || 'silver'; ctx.lineWidth = item.thickness || 1; ctx.beginPath(); ctx.arc(0, 0, item.size / 2, 0, Math.PI * 2); ctx.stroke(); };
             const drawBarbell = (ctx, item) => {
@@ -209,19 +213,55 @@
                 ctx.beginPath(); ctx.arc(-length / 2, 0, ballSize, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(length / 2, 0, ballSize, 0, Math.PI * 2); ctx.fill();
             };
-            jewelleryLibrary = [
+            // Base procedural items
+            const proceduralItems = [
                 { id: 'stud_silver', name: 'Silver Stud', category: 'Studs', type: 'procedural', draw: drawStud, size: 8, color: '#C0C0C0' },
                 { id: 'stud_gold', name: 'Gold Stud', category: 'Studs', type: 'procedural', draw: drawStud, size: 8, color: '#FFD700' },
                 { id: 'hoop_small', name: 'Small Hoop', category: 'Rings', type: 'procedural', draw: drawHoop, size: 20, thickness: 2, color: '#C0C0C0' },
                 { id: 'barbell_short', name: 'Barbell', category: 'Studs', type: 'procedural', draw: drawBarbell, length: 15, thickness: 2, ballSize: 3, color: '#C0C0C0' },
             ];
-            populateJewelleryDrawer();
+
+            // --- Image Loading ---
+            const filenames = [
+                'Charm_ (1).png', 'Charm_ (10).png', 'Charm_ (11).png', 'Charm_ (12).png', 'Charm_ (13).png', 'Charm_ (14).png', 'Charm_ (15).png', 'Charm_ (16).png', 'Charm_ (17).png', 'Charm_ (18).png', 'Charm_ (19).png', 'Charm_ (2).png', 'Charm_ (20).png', 'Charm_ (21).png', 'Charm_ (3).png', 'Charm_ (4).png', 'Charm_ (5).png', 'Charm_ (6).png', 'Charm_ (7).png', 'Charm_ (8).png', 'Charm_ (9).png',
+                'Ring_ (1).png', 'Ring_ (2).png', 'Ring_ (3).png', 'Ring_ (4).png', 'Ring_ (5).png', 'Ring_ (6).png',
+                'Stud_ (1).png', 'Stud_ (2).png', 'Stud_ (3).png', 'Stud_ (4).png', 'Stud_ (5).png', 'Stud_ (6).png',
+                'chain_(1).png', 'chain_(2).png', 'chain_(3).png', 'chain_(4).png', 'chain_(5).png', 'chain_(6).png'
+            ];
+            const baseUrl = 'https://raw.githubusercontent.com/googlesaurus3/earing-app/aeef80be596267cce2d257dda5e45132ad0c6af2/img/';
+            const imageUrls = filenames.map(name => baseUrl + name.replace(/ /g, '%20').replace(/\(/g, '%28').replace(/\)/g, '%29'));
+
+            function preloadImage(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = "Anonymous";
+                    img.onload = () => resolve(img);
+                    img.onerror = (err) => reject(new Error(`Failed to load image: ${src}`));
+                    img.src = src;
+                });
+            }
+
+            try {
+                const loadedImages = await Promise.all(imageUrls.map(preloadImage));
+                const imageItems = loadedImages.map((img, i) => {
+                    const filename = filenames[i];
+                    let category = 'Charms';
+                    if (filename.startsWith('Ring')) category = 'Rings';
+                    if (filename.startsWith('Stud')) category = 'Studs';
+                    if (filename.startsWith('chain')) category = 'Chains';
+                    return { id: `img_${i}`, name: filename.split('.')[0].replace(/_/g, ' '), category, type: 'image', image: img, size: 32 };
+                });
+
+                jewelleryLibrary = [...proceduralItems, ...imageItems];
+                populateJewelleryDrawer();
+            } catch (error) {
+                console.error("Error pre-loading images:", error);
+                list.innerHTML = `<div class="text-center p-4 text-red-500">Error loading images. Please check the console.</div>`;
+                jewelleryLibrary = proceduralItems; // Fallback to only procedural
+                populateJewelleryDrawer();
+            }
         }
 
-        /**
-         * Populates the jewellery drawer with items, optionally filtering by category.
-         * @param {string} category The category to filter by. Defaults to 'All'.
-         */
         function populateJewelleryDrawer(category = 'All') {
             const list = document.getElementById('jewellery-list');
             list.innerHTML = '';
@@ -237,7 +277,14 @@
                 previewCanvas.width = 40 * dpr; previewCanvas.height = 40 * dpr;
                 previewCtx.scale(dpr, dpr);
                 previewCtx.save(); previewCtx.translate(20, 20);
-                if (item.type === 'procedural') item.draw(previewCtx, { ...item, size: item.size * 0.8, length: item.length * 0.8 });
+                if (item.type === 'procedural') {
+                    item.draw(previewCtx, { ...item, size: item.size * 0.8, length: item.length * 0.8 });
+                } else if (item.type === 'image') {
+                    const aspect = item.image.width / item.image.height;
+                    const w = aspect > 1 ? 35 : 35 * aspect;
+                    const h = aspect > 1 ? 35 / aspect : 35;
+                    previewCtx.drawImage(item.image, -w/2, -h/2, w, h);
+                }
                 previewCtx.restore();
                 div.addEventListener('click', () => {
                     selectedJewelleryForPlacement = { ...item, libraryId: item.id, x: 0, y: 0, rotation: 0, scale: 1, flip: false };
@@ -265,15 +312,29 @@
                 placedJewellery.forEach(item => {
                     ctx.save();
                     ctx.translate(item.x, item.y); ctx.rotate(item.rotation * Math.PI / 180); ctx.scale(item.flip ? -1 : 1, 1);
-                    item.draw(ctx, item);
+                    if (item.type === 'procedural') {
+                        item.draw(ctx, item);
+                    } else if (item.type === 'image') {
+                        const aspect = item.image.width / item.image.height;
+                        const w = item.size;
+                        const h = item.size / aspect;
+                        ctx.drawImage(item.image, -w/2, -h/2, w, h);
+                    }
                     ctx.restore();
                 });
                 if (selectedItem && !isExport) {
                     ctx.save();
                     ctx.translate(selectedItem.x, selectedItem.y); ctx.rotate(selectedItem.rotation * Math.PI / 180);
-                    const itemSize = (selectedItem.size || 20), padding = 5;
+                    let itemSize = (selectedItem.size || 20);
+                    let w = itemSize;
+                    let h = itemSize;
+                    if (selectedItem.type === 'image') {
+                        const aspect = selectedItem.image.width / selectedItem.image.height;
+                        h = w / aspect;
+                    }
+                    const padding = 5;
                     ctx.strokeStyle = 'cyan'; ctx.lineWidth = 1 / transform.scale;
-                    ctx.strokeRect(-itemSize/2 - padding, -itemSize/2 - padding, itemSize + padding*2, itemSize + padding*2);
+                    ctx.strokeRect(-w/2 - padding, -h/2 - padding, w + padding*2, h + padding*2);
                     ctx.restore();
                 }
                 ctx.restore();
