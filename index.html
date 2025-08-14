@@ -416,10 +416,10 @@
                     selectedItem[prop] = e.target.type === 'color' ? e.target.value : parseFloat(e.target.value);
                 });
             });
-            deleteBtn.addEventListener('click', () => { if (selectedItem) { saveState(); placedJewellery = placedJewellery.filter(i => i.id !== selectedItem.id); selectedItem = null; updateControlPanel(); saveState(); } });
-            flipBtn.addEventListener('click', () => { if(selectedItem) { saveState(); selectedItem.flip = !selectedItem.flip; saveState(); } });
-            layerUpBtn.addEventListener('click', () => { if(selectedItem) { saveState(); const i = placedJewellery.findIndex(item => item.id === selectedItem.id); if (i < placedJewellery.length - 1) { [placedJewellery[i], placedJewellery[i+1]] = [placedJewellery[i+1], placedJewellery[i]]; saveState(); } } });
-            layerDownBtn.addEventListener('click', () => { if(selectedItem) { saveState(); const i = placedJewellery.findIndex(item => item.id === selectedItem.id); if (i > 0) { [placedJewellery[i], placedJewellery[i-1]] = [placedJewellery[i-1], placedJewellery[i]]; saveState(); } } });
+            deleteBtn.addEventListener('click', () => { if (selectedItem) { placedJewellery = placedJewellery.filter(i => i.id !== selectedItem.id); selectedItem = null; updateControlPanel(); saveState(); } });
+            flipBtn.addEventListener('click', () => { if(selectedItem) { selectedItem.flip = !selectedItem.flip; saveState(); } });
+            layerUpBtn.addEventListener('click', () => { if(selectedItem) { const i = placedJewellery.findIndex(item => item.id === selectedItem.id); if (i < placedJewellery.length - 1) { [placedJewellery[i], placedJewellery[i+1]] = [placedJewellery[i+1], placedJewellery[i]]; saveState(); } } });
+            layerDownBtn.addEventListener('click', () => { if(selectedItem) { const i = placedJewellery.findIndex(item => item.id === selectedItem.id); if (i > 0) { [placedJewellery[i], placedJewellery[i-1]] = [placedJewellery[i-1], placedJewellery[i]]; saveState(); } } });
         }
 
         // --- File Management ---
@@ -427,7 +427,11 @@
         /** Saves the entire project state to a JSON file. */
         function saveProject() {
             const state = {
-                placedJewellery: placedJewellery,
+                // Remove non-serializable properties before saving
+                placedJewellery: placedJewellery.map(item => {
+                    const { image, draw, ...serializableItem } = item;
+                    return serializableItem;
+                }),
                 transform: transform,
                 backgroundImage: backgroundImage ? backgroundImage.src : null
             };
@@ -448,9 +452,16 @@
                     const state = JSON.parse(event.target.result);
                     saveState();
                     placedJewellery = state.placedJewellery || [];
-                    placedJewellery.forEach(item => { // Re-assign drawing functions after loading
+                    // Re-assign drawing functions and image objects after loading
+                    placedJewellery.forEach(item => {
                         const libItem = jewelleryLibrary.find(li => li.id === item.libraryId);
-                        if(libItem) item.draw = libItem.draw;
+                        if(libItem) {
+                            if (libItem.type === 'procedural') {
+                                item.draw = libItem.draw;
+                            } else {
+                                item.image = libItem.image;
+                            }
+                        }
                     });
                     transform = state.transform || { x: 0, y: 0, scale: 1 };
                     selectedItem = null;
@@ -480,9 +491,6 @@
         }
 
         // --- Interaction & Event Handling ---
-        let activePointers = [];
-        let lastPointerDistance = null;
-        let pointerStartPos = null;
 
         /** Gets the client position of a pointer or touch event. */
         function getEventPosition(e) {
@@ -566,7 +574,6 @@
             if (pointerStartPos) {
                 const dist = Math.hypot(upPos.x - pointerStartPos.x, upPos.y - pointerStartPos.y);
                 if (activePointers.length === 1 && selectedJewelleryForPlacement && dist < 5) {
-                    saveState();
                     const worldPos = screenToWorld(upPos);
                     const newJewellery = { ...selectedJewelleryForPlacement, id: Date.now(), x: worldPos.x, y: worldPos.y };
                     placedJewellery.push(newJewellery);
@@ -615,8 +622,8 @@
             const scale = canvasAspect > imageAspect ? canvas.clientWidth / backgroundImage.width : canvas.clientHeight / backgroundImage.height;
             transform = { scale: scale, x: (canvas.clientWidth - backgroundImage.width * scale) / 2, y: (canvas.clientHeight - backgroundImage.height * scale) / 2 };
         }
-        resetViewBtn.addEventListener('click', () => { if(backgroundImage) { saveState(); resetView(); saveState(); } });
-        clearBtn.addEventListener('click', () => { if(confirm('Are you sure you want to clear everything?')) { saveState(); placedJewellery = []; selectedItem = null; backgroundImage = null; transform = {x:0, y:0, scale:1}; updateControlPanel(); saveState(); } });
+        resetViewBtn.addEventListener('click', () => { if(backgroundImage) { resetView(); saveState(); } });
+        clearBtn.addEventListener('click', () => { if(confirm('Are you sure you want to clear everything?')) { placedJewellery = []; selectedItem = null; backgroundImage = null; transform = {x:0, y:0, scale:1}; updateControlPanel(); saveState(); } });
 
         canvas.addEventListener('pointerdown', handlePointerDown);
         canvas.addEventListener('pointermove', handlePointerMove);
